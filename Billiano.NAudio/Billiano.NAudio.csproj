@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsTrimmable>true</IsTrimmable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Authors>Billiano</Authors>
+    <Description>Utility library for NAudio</Description>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/billiano-dev/Billiano.NAudio</RepositoryUrl>
+    <Version>1.0.2</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="PortAudioSharp" Version="0.3.0" />
+  </ItemGroup>
+
+</Project>
