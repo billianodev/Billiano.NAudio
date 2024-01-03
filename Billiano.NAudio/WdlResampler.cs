@@ -1,4 +1,6 @@
-﻿using NAudio.Wave;
+﻿using System;
+using System.Diagnostics;
+using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
 namespace Billiano.NAudio;
@@ -38,14 +40,12 @@ public class WdlResampler : ISampleProvider
 		}
 		if (source.WaveFormat.Channels != channels)
 		{
-			if (source.WaveFormat.Channels == 1 && channels == 2)
+			source = (source.WaveFormat.Channels, channels) switch
 			{
-				source = new MonoToStereoSampleProvider(source);
-			}
-			else if (source.WaveFormat.Channels == 2 && channels == 1)
-			{
-				source = new StereoToMonoSampleProvider(source);
-			}
+				(1, 2) => new MonoToStereoSampleProvider(source),
+				(2, 1) => new StereoToMonoSampleProvider(source),
+				_ => throw new NotImplementedException()
+			};
 		}
 		_source = source;
 	}
