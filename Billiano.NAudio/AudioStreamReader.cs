@@ -1,56 +1,23 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
-using NAudio.FileFormats.Wav;
 using NAudio.Vorbis;
 using NAudio.Wave;
 using NLayer.NAudioSupport;
-using NVorbis;
 
 namespace Billiano.NAudio;
 
 /// <summary>
 /// Auto detect reader
 /// </summary>
-public class AudioStreamReader : WaveStream
+public static class AudioStreamReader
 {
 	private static readonly byte[] RIFF = Encoding.ASCII.GetBytes(nameof(RIFF));
 	private static readonly byte[] ID3 = Encoding.ASCII.GetBytes(nameof(ID3));
 	private static readonly byte[] OggS = Encoding.ASCII.GetBytes(nameof(OggS));
 
-	/// <inheritdoc/>
-	public override WaveFormat WaveFormat => _source.WaveFormat;
-
-	/// <inheritdoc/>
-	public override long Length => _source.Length;
-
-	/// <inheritdoc/>
-	public override long Position
-	{
-		get => _source.Position;
-		set => _source.Position = value;
-	}
-
-	private readonly WaveStream _source;
-
-	private AudioStreamReader(WaveStream stream)
-	{
-		_source = stream;
-	}
-
 	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="stream"></param>
-	[Obsolete()]
-	public AudioStreamReader(Stream stream)
-	{
-		_source = LoadByHeader(stream);
-	}
-
-	/// <summary>
-	/// Faster but less acurrate by reading first few bytes
+	/// Faster but less acurrate detection
 	/// </summary>
 	public static WaveStream LoadByHeader(Stream stream)
 	{
@@ -68,7 +35,7 @@ public class AudioStreamReader : WaveStream
 	}
 
 	/// <summary>
-	/// Slower but more accurate by trying to create each reader
+	/// Slower but more accurate detection
 	/// </summary>
 	public static WaveStream LoadByBruteCreate(Stream stream)
 	{
@@ -76,12 +43,6 @@ public class AudioStreamReader : WaveStream
 			?? TryReadMp3(stream)
 			?? TryReadVorbisWave(stream)
 			?? throw new NotSupportedException();
-	}
-
-	/// <inheritdoc/>
-	public override int Read(byte[] buffer, int offset, int count)
-	{
-		return _source.Read(buffer, offset, count);
 	}
 
 	private static WaveStream? TryReadWave(Stream stream)

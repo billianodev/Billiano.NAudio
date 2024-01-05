@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using NAudio.Wave;
 using PortAudioSharp;
 
@@ -9,7 +10,7 @@ namespace Billiano.NAudio;
 /// </summary>
 public sealed class PortAudioOut : IWavePlayer, IDisposable
 {
-	private const int FramesPerBuffer = 4096;
+	private const int DefaultFramesPerBuffer = 4096;
 
 	/// <inheritdoc/>
 	public event EventHandler<StoppedEventArgs>? PlaybackStopped;
@@ -21,46 +22,42 @@ public sealed class PortAudioOut : IWavePlayer, IDisposable
 	public PlaybackState PlaybackState { get; private set; }
 
 	/// <inheritdoc/>
-	public WaveFormat? OutputWaveFormat => _sample?.WaveFormat;
+	public WaveFormat? OutputWaveFormat => sample?.WaveFormat;
 
-	private readonly int _device;
-	private readonly DeviceInfo _deviceInfo;
-	private StreamParameters _param;
+	private readonly int framesPerBuffer;
 
-	private Stream? _stream;
-	private int _frameSize;
+	private readonly int deviceId;
+	private readonly DeviceInfo device;
 
-	private ISampleProvider? _sample;
+	private ISampleProvider? sample;
+	private Stream? stream;
+	private StreamParameters streamParams;
 
-	/// <summary>
-	/// 
-	/// </summary>
-	public PortAudioOut()
+	static PortAudioOut()
 	{
 		PortAudio.LoadNativeLibrary();
 		PortAudio.Initialize();
-
-		_device = PortAudio.DefaultOutputDevice;
-		_deviceInfo = PortAudio.GetDeviceInfo(_device);
-
-		_param.device = _device;
-		_param.suggestedLatency = _deviceInfo.defaultLowInputLatency;
-		_param.sampleFormat = SampleFormat.Float32;
 	}
 
 	/// <summary>
 	/// 
 	/// </summary>
-	~PortAudioOut()
+	public PortAudioOut(int framesPerBuffer = DefaultFramesPerBuffer)
 	{
-		Dispose(false);
+		this.framesPerBuffer = framesPerBuffer;
+
+		deviceId = PortAudio.DefaultOutputDevice;
+		device = PortAudio.GetDeviceInfo(deviceId);
+
+		streamParams.device = deviceId;
+		streamParams.suggestedLatency = device.defaultLowInputLatency;
+		streamParams.sampleFormat = SampleFormat.Float32;
 	}
 
 	/// <inheritdoc/>
 	public void Dispose()
 	{
-		GC.SuppressFinalize(this);
-		Dispose(true);
+		stream?.Dispose();
 	}
 
 	/// <inheritdoc/>
@@ -70,67 +67,58 @@ public sealed class PortAudioOut : IWavePlayer, IDisposable
 		{
 			throw new InvalidOperationException();
 		}
+		
+		sample = waveProvider.ToSampleProvider();
+		streamParams.channelCount = sample.WaveFormat.Channels;
 
-		int sampleRate = waveProvider.WaveFormat.SampleRate;
+		int sampleRate = sample.WaveFormat.SampleRate;
+		int frameSize = sample.WaveFormat.Channels * framesPerBuffer;
 
-		_sample = waveProvider.ToSampleProvider();
-		_param.channelCount = _sample.WaveFormat.Channels;
-		_frameSize = FramesPerBuffer * _param.channelCount;
-
-		_stream?.Dispose();
-		_stream = new Stream(null, _param, sampleRate, (uint)_frameSize, StreamFlags.NoFlag, Callback, null);
-		_stream.SetFinishedCallback(FinishedCallback);
+		stream?.Dispose();
+		stream = new Stream(null, streamParams, sampleRate, (uint)frameSize, StreamFlags.NoFlag, Callback, null);
+		stream.SetFinishedCallback(FinishedCallback);
 	}
 
 	/// <inheritdoc/>
 	public void Pause()
 	{
-		if (_stream != null && _stream.IsActive)
+		if (stream != null && stream.IsActive)
 		{
-			_stream.Stop();
 			PlaybackState = PlaybackState.Paused;
+			stream.Stop();
 		}
 	}
 
 	/// <inheritdoc/>
 	public void Play()
 	{
-		if (_stream == null)
-		{
-			throw new InvalidOperationException();
-		}
-		if (_stream.IsStopped)
+		if (stream != null && stream.IsStopped)
 		{
 			PlaybackState = PlaybackState.Playing;
-			_stream.Start();
+			stream.Start();
 		}
 	}
 
 	/// <inheritdoc/>
 	public void Stop()
 	{
-		if (_stream != null)
+		if (stream != null)
 		{
 			PlaybackState = PlaybackState.Stopped;
-			_stream.Dispose();
-			_stream = null;
+			stream.Dispose();
+			stream = null;
 		}
 	}
 
-	private void Dispose(bool disposing)
+	private unsafe StreamCallbackResult Callback(nint input, nint output, uint frameCount, ref StreamCallbackTimeInfo timeInfo, StreamCallbackFlags statusFlags, nint userDataPtr)
 	{
-		PortAudio.Terminate();
-		if (disposing)
+		float[] data = new float[frameCount];
+		int count = sample!.Read(data, 0, data.Length);
+		if (Volume == 1f)
 		{
-			_stream?.Dispose();
+			Marshal.Copy(data, 0, output, count);
 		}
-	}
-
-	private StreamCallbackResult Callback(nint input, nint output, uint frameCount, ref StreamCallbackTimeInfo timeInfo, StreamCallbackFlags statusFlags, nint userDataPtr)
-	{
-		float[] data = new float[_frameSize];
-		int count = _sample!.Read(data, 0, data.Length);
-		unsafe
+		else
 		{
 			float* buffer = (float*)output;
 			for (int i = 0; i < count; i++)

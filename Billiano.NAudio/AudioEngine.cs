@@ -12,15 +12,15 @@ public sealed class AudioEngine : IDisposable
 	/// <summary>
 	/// 
 	/// </summary>
-	public float Volume => _player.Volume;
+	public float Volume => player.Volume;
 
 	/// <summary>
 	/// 
 	/// </summary>
-	public WaveFormat WaveFormat => _mixer.WaveFormat;
+	public WaveFormat WaveFormat => mixer.WaveFormat;
 
-	private readonly PortAudioOut _player;
-	private readonly MixingSampleProvider _mixer;
+	private readonly PortAudioOut player;
+	private readonly MixingSampleProvider mixer;
 
 	/// <summary>
 	/// 
@@ -29,30 +29,27 @@ public sealed class AudioEngine : IDisposable
 	/// <param name="channels"></param>
 	public AudioEngine(int sampleRate = 44100, int channels = 1)
 	{
-		_mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channels));
-		_mixer.ReadFully = true;
+		mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channels));
+		mixer.ReadFully = true;
 
-		_player = new PortAudioOut();
-		_player.Init(_mixer);
-		_player.Play();
-	}
-
-	/// <summary>
-	/// 
-	/// </summary>
-	~AudioEngine()
-	{
-		Dispose(false);
+		player = new PortAudioOut();
+		player.Init(mixer);
+		player.Play();
 	}
 
 	/// <summary>
 	/// Play <paramref name="wave"/> 
 	/// </summary>
 	/// <param name="wave"></param>
-	/// <param name="volume"></param>
-	public void Play(WaveCache wave, float volume = 1f)
+	public void Play(SampleCache wave)
 	{
-		_mixer.AddMixerInput(new WaveCacheSampleProvider(wave, volume));
+		mixer.AddMixerInput(wave.ToSampleProvider());
+	}
+
+	/// <inheritdoc/>
+	public void Play(SampleCache wave, float volume)
+	{
+		mixer.AddMixerInput(wave.ToSampleProvider(volume));
 	}
 
 	/// <summary>
@@ -61,21 +58,12 @@ public sealed class AudioEngine : IDisposable
 	/// <param name="volume"></param>
 	public void SetVolume(float volume)
 	{
-		_player.Volume = volume;
+		player.Volume = volume;
 	}
 
 	/// <inheritdoc/>
 	public void Dispose()
 	{
-		GC.SuppressFinalize(this);
-		Dispose(true);
-	}
-
-	private void Dispose(bool disposing)
-	{
-		if (disposing)
-		{
-			_player.Dispose();
-		}
+		player.Dispose();
 	}
 }
