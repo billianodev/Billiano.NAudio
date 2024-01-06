@@ -8,7 +8,7 @@ Utility library for NAudio
 
 - AudioEngine, fire and forget audio playback _(useful for playing sound effects)_
 	- Use with SampleCache and SampleCacheProvider or SampleCacheChannel
-- AudioStreamReader, AudioFileReader but for stream _(currently support standard wave, mp3 and ogg by reading stream header nor brute create)_
+- AudioStreamReader, AudioFileReader but for stream _(currently support standard wave, mp3 and ogg by reading stream header, for windows also use StreamMediaFoundationReader as a fallback)_
 - PortAudioOut, PortAudioSharp implementation of NAudio.Wave.IWavePlayer for cross-platform audio playback
 - WdlResampler, sample rate and channels resampler
 
